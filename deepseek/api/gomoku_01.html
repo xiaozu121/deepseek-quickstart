@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>五子棋 · 深色极简</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at 30% 20%, #0b1a2b, #03080f);
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            padding: 16px;
+        }
+        .game-container {
+            background: #111e2b;
+            background-image: linear-gradient(145deg, #0f1d2b, #1a2d3f);
+            padding: 30px 30px 35px;
+            border-radius: 56px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.04);
+            backdrop-filter: blur(2px);
+            max-width: 700px;
+            width: fit-content;
+            margin: 0 auto;
+            transition: all 0.2s;
+        }
+        .board-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            border-radius: 28px;
+            box-shadow: 0 10px 18px rgba(0,0,0,0.7), inset 0 0 0 1px #3e5a6b;
+            background: #2c3e4e;
+            background-image: radial-gradient(circle at 20% 30%, #4d6a7e, #1f3140);
+            cursor: pointer;
+            touch-action: none;
+            transition: box-shadow 0.2s;
+        }
+        canvas:active {
+            box-shadow: 0 6px 10px rgba(0,0,0,0.9);
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 18px;
+            margin-top: 28px;
+        }
+        .ctrl-btn {
+            background: #1d2e3c;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+            color: #dbeaf5;
+            box-shadow: 0 6px 0 #0b141c, 0 8px 16px rgba(0,0,0,0.6);
+            transition: all 0.08s ease;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border: 1px solid rgba(255,255,255,0.03);
+            background-image: linear-gradient(145deg, #253b4b, #172936);
+            min-width: 110px;
+            flex: 0 1 auto;
+        }
+        .ctrl-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #0b141c, 0 6px 12px rgba(0,0,0,0.7);
+        }
+        .ctrl-btn:disabled {
+            opacity: 0.35;
+            transform: translateY(2px);
+            box-shadow: 0 3px 0 #0b141c;
+            pointer-events: none;
+        }
+        .status {
+            color: #c7dbe9;
+            font-size: 1.2rem;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+            background: #0d1a25;
+            padding: 8px 22px;
+            border-radius: 40px;
+            display: inline-block;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+            margin-bottom: 10px;
+            border: 1px solid #2a4357;
+            backdrop-filter: blur(2px);
+        }
+        .status span {
+            font-weight: 600;
+            color: #f2e9c2;
+        }
+        /* 模态框 - 深色极简 */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.2s ease, visibility 0s 0.2s;
+            z-index: 999;
+        }
+        .modal-overlay.active {
+            visibility: visible;
+            opacity: 1;
+            transition: opacity 0.2s ease, visibility 0s 0s;
+        }
+        .modal-card {
+            background: #13212e;
+            background-image: linear-gradient(145deg, #1a2d3d, #0e1a26);
+            padding: 2.2rem 3rem;
+            border-radius: 60px;
+            box-shadow: 0 30px 50px rgba(0,0,0,0.9), inset 0 0 0 1px #3b5a6e;
+            text-align: center;
+            max-width: 380px;
+            width: 85%;
+            transform: scale(0.92);
+            transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+            border: 1px solid rgba(200, 220, 240, 0.05);
+        }
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+        .modal-card h2 {
+            font-size: 2.2rem;
+            font-weight: 300;
+            color: #ebdbb2;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 5px #00000055;
+        }
+        .modal-card .winner-emoji {
+            font-size: 3.8rem;
+            line-height: 1.2;
+            filter: drop-shadow(0 8px 12px #00000066);
+        }
+        .modal-card p {
+            color: #b6cfdf;
+            font-size: 1.3rem;
+            margin: 12px 0 18px;
+            font-weight: 300;
+        }
+        .modal-btn {
+            background: #2b4458;
+            border: none;
+            padding: 12px 44px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #f0f6fc;
+            box-shadow: 0 6px 0 #0f1b24, 0 8px 18px #00000060;
+            cursor: pointer;
+            transition: 0.06s linear;
+            background-image: linear-gradient(145deg, #335467, #1e3344);
+            border: 1px solid #3f6077;
+            letter-spacing: 0.5px;
+        }
+        .modal-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #0f1b24, 0 6px 14px #00000080;
+        }
+        @media (max-width: 500px) {
+            .game-container { padding: 20px 16px 24px; border-radius: 40px; }
+            .ctrl-btn { padding: 10px 18px; font-size: 0.95rem; min-width: 80px; }
+            .status { font-size: 1rem; padding: 6px 16px; }
+            .modal-card { padding: 1.8rem 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <div class="board-wrapper">
+        <div class="status" id="statusDisplay">⚫ 黑棋走</div>
+        <canvas id="boardCanvas" width="540" height="540"></canvas>
+        <div class="controls">
+            <button class="ctrl-btn" id="undoBtn">↩ 悔棋</button>
+            <button class="ctrl-btn" id="resetBtn">⟳ 重开</button>
+        </div>
+    </div>
+</div>
+
+<!-- 胜利模态框 -->
+<div class="modal-overlay" id="winModal">
+    <div class="modal-card">
+        <div class="winner-emoji" id="winnerEmoji">🏆</div>
+        <h2 id="winnerTitle">黑胜</h2>
+        <p id="winnerDesc">五子连珠，恭喜！</p>
+        <button class="modal-btn" id="modalResetBtn">再来一局</button>
+    </div>
+</div>
+
+<script>
+    (function(){
+        const canvas = document.getElementById('boardCanvas');
+        const ctx = canvas.getContext('2d');
+        const statusDiv = document.getElementById('statusDisplay');
+        const winModal = document.getElementById('winModal');
+        const winnerTitle = document.getElementById('winnerTitle');
+        const winnerEmoji = document.getElementById('winnerEmoji');
+        const winnerDesc = document.getElementById('winnerDesc');
+
+        // 棋盘参数
+        const BOARD_SIZE = 15;
+        const CELL_SIZE = canvas.width / (BOARD_SIZE + 1);  // 左右留边
+        const OFFSET = CELL_SIZE;
+        const PIECE_RADIUS = CELL_SIZE * 0.42;
+
+        // 游戏状态
+        let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null)); // 'black' 或 'white'
+        let currentPlayer = 'black'; // 'black' 先手
+        let gameOver = false;
+        let moveHistory = []; // 存储 { row, col, player }
+
+        // DOM 元素
+        const undoBtn = document.getElementById('undoBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const modalResetBtn = document.getElementById('modalResetBtn');
+
+        // ---------- 绘制棋盘 (木质/高对比) ----------
+        function drawBoard() {
+            // 背景 (仿木质纹理)
+            const grad = ctx.createRadialGradient(80, 80, 20, 200, 200, 400);
+            grad.addColorStop(0, '#5f7d5a');
+            grad.addColorStop(0.3, '#3d5a3c');
+            grad.addColorStop(0.7, '#1f3525');
+            grad.addColorStop(1, '#0f1e14');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制网格线 (高对比金色网格)
+            ctx.lineWidth = 1.8;
+            ctx.strokeStyle = '#dacba0';
+            ctx.shadowColor = '#00000066';
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetX = 1;
+            ctx.shadowOffsetY = 1;
+
+            // 画线
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                const pos = OFFSET + i * CELL_SIZE;
+                ctx.beginPath();
+                ctx.moveTo(OFFSET, pos);
+                ctx.lineTo(OFFSET + (BOARD_SIZE-1) * CELL_SIZE, pos);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(pos, OFFSET);
+                ctx.lineTo(pos, OFFSET + (BOARD_SIZE-1) * CELL_SIZE);
+                ctx.stroke();
+            }
+
+            // 画星位 (天元/小目)
+            const starPoints = [3, 7, 11]; // 五子棋常见星位
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = '#e2cf9e';
+            for (let r of starPoints) {
+                for (let c of starPoints) {
+                    ctx.beginPath();
+                    ctx.arc(OFFSET + r * CELL_SIZE, OFFSET + c * CELL_SIZE, CELL_SIZE*0.1, 0, 2*Math.PI);
+                    ctx.fill();
+                }
+            }
+            // 额外星位 (边星)
+            const sideStars = [[3,3], [11,3], [3,11], [11,11], [7,7]];
+            for (let [x,y] of sideStars) {
+                ctx.beginPath();
+                ctx.arc(OFFSET + x * CELL_SIZE, OFFSET + y * CELL_SIZE, CELL_SIZE*0.1, 0, 2*Math.PI);
+                ctx.fill();
+            }
+
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+            // 画棋子 (带立体阴影)
+            for (let row = 0; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    const player = board[row][col];
+                    if (!player) continue;
+                    const x = OFFSET + col * CELL_SIZE;
+                    const y = OFFSET + row * CELL_SIZE;
+                    drawPiece(x, y, player);
+                }
+            }
+        }
+
+        // 绘制单个棋子 (立体感)
+        function drawPiece(x, y, player) {
+            const radius = PIECE_RADIUS;
+            ctx.shadowColor = '#00000099';
+            ctx.shadowBlur = 12;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+
+            // 渐变主体
+            const gradient = ctx.createRadialGradient(x-4, y-4, radius*0.15, x, y, radius*1.2);
+            if (player === 'black') {
+                gradient.addColorStop(0, '#2f2f2f');
+                gradient.addColorStop(0.4, '#1a1a1a');
+                gradient.addColorStop(0.8, '#0a0a0a');
+                gradient.addColorStop(1, '#000000');
+            } else {
+                gradient.addColorStop(0, '#f9f9fa');
+                gradient.addColorStop(0.3, '#f0f0f0');
+                gradient.addColorStop(0.7, '#d4d4d4');
+                gradient.addColorStop(1, '#b0b0b0');
+            }
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // 高光 (增强立体)
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetX = 1;
+            ctx.shadowOffsetY = 1;
+            ctx.beginPath();
+            ctx.arc(x-3, y-3, radius*0.2, 0, 2*Math.PI);
+            ctx.fillStyle = player === 'black' ? '#5a5a5a' : '#ffffffdd';
+            ctx.fill();
+
+            // 边缘光晕
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.strokeStyle = player === 'black' ? '#222' : '#ddd';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.arc(x, y, radius-1, 0, 2*Math.PI);
+            ctx.stroke();
+
+            // 清除阴影避免影响后续
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+        }
+
+        // ---------- 工具: 检查五子连珠 ----------
+        function checkWin(row, col, player) {
+            const directions = [[1,0],[0,1],[1,1],[1,-1]];
+            for (let [dx, dy] of directions) {
+                let count = 1;
+                // 正方向
+                for (let step = 1; step < 5; step++) {
+                    const nr = row + dx * step;
+                    const nc = col + dy * step;
+                    if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) break;
+                    if (board[nr][nc] === player) count++; else break;
+                }
+                // 反方向
+                for (let step = 1; step < 5; step++) {
+                    const nr = row - dx * step;
+                    const nc = col - dy * step;
+                    if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) break;
+                    if (board[nr][nc] === player) count++; else break;
+                }
+                if (count >= 5) return true;
+            }
+            return false;
+        }
+
+        // ---------- 落子逻辑 ----------
+        function placePiece(row, col) {
+            if (gameOver) return false;
+            if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return false;
+            if (board[row][col] !== null) return false;
+
+            board[row][col] = currentPlayer;
+            moveHistory.push({ row, col, player: currentPlayer });
+
+            // 检查胜利
+            if (checkWin(row, col, currentPlayer)) {
+                gameOver = true;
+                drawBoard();
+                showWinModal(currentPlayer);
+                updateStatus();
+                return true;
+            }
+
+            // 切换玩家
+            currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+            updateStatus();
+            drawBoard();
+            return true;
+        }
+
+        // ---------- 悔棋 ----------
+        function undoMove() {
+            if (gameOver) return;
+            if (moveHistory.length === 0) return;
+
+            const last = moveHistory.pop();
+            board[last.row][last.col] = null;
+            // 如果上一步之后没有切换玩家？但悔棋时应该回退到上一步的玩家
+            // 但切换玩家是在落子后切换，所以悔棋时需恢复上一步的玩家
+            currentPlayer = last.player;
+            // 但是可能连续悔棋？每次pop一个，恢复为那个棋子的玩家
+            // 如果悔棋后还有棋子，当前玩家应该是最后一个棋子的对手？但更合理：悔棋后轮到被移除棋子的玩家。
+            // 上面已经设置 currentPlayer = last.player; 符合逻辑
+            updateStatus();
+            drawBoard();
+        }
+
+        // ---------- 重置 ----------
+        function resetGame() {
+            board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
+            currentPlayer = 'black';
+            gameOver = false;
+            moveHistory = [];
+            winModal.classList.remove('active');
+            updateStatus();
+            drawBoard();
+        }
+
+        // ---------- 更新状态文字 ----------
+        function updateStatus() {
+            if (gameOver) {
+                statusDiv.innerHTML = `🏁 游戏结束 · <span>${currentPlayer === 'black' ? '⚪白' : '⚫黑'}胜</span>`;
+                return;
+            }
+            const icon = currentPlayer === 'black' ? '⚫' : '⚪';
+            const name = currentPlayer === 'black' ? '黑棋' : '白棋';
+            statusDiv.innerHTML = `${icon} ${name}走`;
+        }
+
+        // ---------- 显示胜利模态框 ----------
+        function showWinModal(player) {
+            const isBlack = player === 'black';
+            winnerTitle.innerText = isBlack ? '黑方 胜利' : '白方 胜利';
+            winnerEmoji.innerText = isBlack ? '🏆⚫' : '🏆⚪';
+            winnerDesc.innerText = '五子连珠，精彩对局！';
+            winModal.classList.add('active');
+        }
+
+        // ---------- 事件绑定: Canvas 点击 ----------
+        function handleCanvasClick(e) {
+            if (gameOver) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
+            const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+
+            const mouseX = (clientX - rect.left) * scaleX;
+            const mouseY = (clientY - rect.top) * scaleY;
+
+            // 计算最近交叉点
+            const gridX = Math.round((mouseX - OFFSET) / CELL_SIZE);
+            const gridY = Math.round((mouseY - OFFSET) / CELL_SIZE);
+
+            if (gridX < 0 || gridX >= BOARD_SIZE || gridY < 0 || gridY >= BOARD_SIZE) return;
+
+            // 检查点击位置距离交叉点距离 (防止点空隙)
+            const exactX = OFFSET + gridX * CELL_SIZE;
+            const exactY = OFFSET + gridY * CELL_SIZE;
+            const dist = Math.hypot(mouseX - exactX, mouseY - exactY);
+            if (dist > CELL_SIZE * 0.42) return;  // 点击太远忽略
+
+            placePiece(gridY, gridX); // 注意 row = gridY, col = gridX
+        }
+
+        // 鼠标 & 触屏
+        canvas.addEventListener('click', handleCanvasClick);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            if (touch) handleCanvasClick({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: false });
+
+        // 按钮事件
+        undoBtn.addEventListener('click', undoMove);
+        resetBtn.addEventListener('click', resetGame);
+        modalResetBtn.addEventListener('click', resetGame);
+
+        // 点击模态外部关闭（但保留模态，最好点按钮关闭）
+        winModal.addEventListener('click', (e) => {
+            if (e.target === winModal) resetGame();
+        });
+
+        // 初始化
+        resetGame();
+        // 额外绘制一次
+        drawBoard();
+    })();
+</script>
+</body>
+</html>
